@@ -14,7 +14,7 @@ const smtpPassword = process.env.SMTP_PASSWORD || ''
 
 const clientURL = process.env.CLIENT_URL || ''
 
-const uploadDir = process.env.UPLOAD_FILE || ''
+
 
 module.exports = {
   serverPort,
@@ -24,5 +24,5 @@ module.exports = {
   smtpPassword,
   smtpUsername,
   clientURL,
-  uploadDir,
+ 
 };
