@@ -97,10 +97,16 @@ const processRegister = async (req, res, next) => {
   try {
     const { name, email, password, phone, address } = req.body;
 
-    if (!req.file) {
+    const image = req.file;
+
+    if (!image) {
+      throw createError(400, "Image file is required");
+    }
+    if (image.size > 2 * 1024 * 1024) {
+      throw createError(400, "File too large. It must be less than 2 MB");
     }
 
-    const imageBufferString = req.file.buffer.toString("base64");
+    const imageBufferString = image.buffer.toString("base64");
 
     const userExists = await User.exists({ email: email });
     if (userExists) {
@@ -177,10 +183,59 @@ const activateUserAccount = async (req, res, next) => {
   }
 };
 
+const updateUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const options = { password: 0 };
+    await findWithId(User, userId, options);
+    const updateOptions = { new: true, runValidators: true, context: "query" };
+
+    let updates = {};
+
+    console.log(req.body.email);
+    for (let key in req.body) {
+      if (["name", "password", "phone", "address"].includes(key)) {
+        updates[key] = req.body[key];
+      } else if (["email"].includes(key)) {
+        throw createError(400, "Email can not be updated");
+      }
+    }
+
+    const image = req.file;
+    if (image) {
+      //image size max 2mb
+      if (image.size > 2 * 1024 * 1024) {
+        throw createError(400, "File too large. It must be less than 2 MB");
+      }
+
+      updates.image = image.buffer.toString("base64");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updates,
+      updateOptions
+    ).select("-password");
+
+    if (!updatedUser) {
+      throw createError(404, "User with this ID does not exist");
+    }
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: "user was updated successfully",
+      payload: { updatedUser },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
   deleteUserById,
   processRegister,
   activateUserAccount,
+  updateUserById,
 };
