@@ -43,12 +43,14 @@ const userSchema = new Schema(
       // set: (v) => bcrypt.hashSync(v, bcrypt.genSaltSync(10))
     },
     image: {
-      type: String,
-      default: defaultImagePath,
+      type: Buffer,
+      contentType: String,
+      required: [true, 'User image is required']
     },
     address: {
       type: String,
       required: [true, "User address is required"],
+      minlength: [3, 'The length of user address can be minimum 3 chars']
     },
     phone: {
       type: String,
