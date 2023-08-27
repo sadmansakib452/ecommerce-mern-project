@@ -1,11 +1,13 @@
 const express = require("express");
 
 const runValidation = require("../validators");
-const { handleLogin } = require("../controllers/authControllers");
+const { handleLogin, handleLogout } = require("../controllers/authControllers");
+const { isLoggedOut, isLoggedIn } = require("../middlewares/auth");
 
 const authRouter = express.Router();
 
 
-authRouter.post('/login', handleLogin)
+authRouter.post('/login', isLoggedOut, handleLogin)
+authRouter.post('/logout', isLoggedIn, handleLogout)
 
 module.exports = authRouter;

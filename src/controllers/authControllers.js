@@ -33,11 +33,11 @@ const handleLogin = async (req, res, next) => {
     //token, set on cokie
     //create jwt
     const accessToken = createJSONWebToken(
-      {email},
+      {_id: user._id},
       jwtAccessKey,
       "10m"
     );
-    res.cookie('access_token',accessToken,{
+    res.cookie('accessToken',accessToken,{
         maxAge: 15 * 60 * 1000, //15m
         httpOnly: true,
         secure: true,
@@ -55,4 +55,21 @@ const handleLogin = async (req, res, next) => {
   }
 };
 
-module.exports = { handleLogin };
+const handleLogout = async (req, res, next) => {
+  try {
+
+    res.clearCookie("accessToken");
+    
+    //success response
+    return successResponse(res, {
+      statusCode: 200,
+      message: "User logged out successfully",
+      payload: {  },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+module.exports = { handleLogin, handleLogout };
