@@ -75,10 +75,6 @@ const deleteUserById = async (req, res, next) => {
     const options = { password: 0 };
     const user = await findWithId(User, id, options);
 
-    const userImagePath = user.image;
-
-    deleteImage(userImagePath);
-
     await User.findByIdAndDelete({
       _id: id,
       isAdmin: false,
@@ -231,6 +227,35 @@ const updateUserById = async (req, res, next) => {
   }
 };
 
+const handleBanUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    await findWithId(User, userId);
+    const updates = {isBanned: true}
+    const updateOptions = { new: true, runValidators: true, context: "query" };
+
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updates,
+      updateOptions
+    ).select("-password");
+
+    if (!updatedUser) {
+      throw createError(400, "User was not banned successfully");
+    }
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: "user was banned successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 module.exports = {
   getUsers,
   getUserById,
@@ -238,4 +263,5 @@ module.exports = {
   processRegister,
   activateUserAccount,
   updateUserById,
+  handleBanUserById,
 };

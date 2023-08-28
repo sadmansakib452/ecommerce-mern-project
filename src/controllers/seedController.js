@@ -1,30 +1,27 @@
 const data = require("../data");
-const User = require("../models/userModel")
+const User = require("../models/userModel");
 
-const seedUser = async(req, res, next) =>{
-
-    try{
+const seedUser = async (req, res, next) => {
+  try {
     //   deleting all existing users
-      await User.deleteMany({});
+    await User.deleteMany({});
 
-      // inserting new users
-        // const users = await User.insertMany(data.users)
+    // inserting new users
 
-        const users = new User(data.users[1])
-         await users.save()
+    const insertedUsers = [];
 
-        return res.status(201).json({users})       
-
-
-
-   
-        //successful response
-        return res.status(201).json(users)
-
-    }catch(error){
-        next(error)
+    // Inserting new users with hashed passwords using .save()
+    for (const userData of data.users) {
+      const newUser = new User(userData);
+      const savedUser = await newUser.save();
+      insertedUsers.push(savedUser);
     }
 
-}
+    //successful response
+    return res.status(201).json(insertedUsers);
+  } catch (error) {
+    next(error);
+  }
+};
 
-module.exports = {seedUser}
+module.exports = { seedUser };

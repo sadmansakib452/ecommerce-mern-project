@@ -30,12 +30,15 @@ const handleLogin = async (req, res, next) => {
     if (user.isBanned) {
       throw createError(403, "You are Banned. Please contact authority");
     }
+
+    
+
     //token, set on cokie
     //create jwt
     const accessToken = createJSONWebToken(
-      {_id: user._id},
+      {user},
       jwtAccessKey,
-      "10m"
+      "15m"
     );
     res.cookie('accessToken',accessToken,{
         maxAge: 15 * 60 * 1000, //15m
@@ -44,11 +47,15 @@ const handleLogin = async (req, res, next) => {
         sameSite: 'none'
     })
 
+    const userWithoutPassword = await User.findOne({ email }).select(
+      "-password"
+    );
+
     //success response
     return successResponse(res, {
       statusCode: 200,
       message: "User logged in successfully",
-      payload: { user },
+      payload: { userWithoutPassword },
     });
   } catch (error) {
     next(error);
