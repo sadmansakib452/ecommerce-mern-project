@@ -4,7 +4,12 @@ const { successResponse } = require("./responseController");
 const { findWithId } = require("../services/findItem");
 const { deleteImage } = require("../helper/deleteImage");
 const { createJSONWebToken } = require("../helper/jsonwebtoken");
-const { jwtActivationKey, clientURL, jwtResetPasswordKey } = require("../secret");
+const {
+  jwtActivationKey,
+  clientURL,
+  jwtResetPasswordKey,
+  serverURL,
+} = require("../secret");
 const emailWithNodeMail = require("../helper/email");
 const fs = require("fs").promises;
 const jwt = require("jsonwebtoken");
@@ -113,6 +118,7 @@ const processRegister = async (req, res, next) => {
     //create jwt
     const token = createJSONWebToken(
       { name, email, password, phone, address, image: imageBufferString },
+      // { name, email, password, phone, address },
       jwtActivationKey,
       "10m"
     );
@@ -148,7 +154,7 @@ const processRegister = async (req, res, next) => {
 const activateUserAccount = async (req, res, next) => {
   try {
     const token = req.body.token;
-    console.log("token   ", token);
+    console.log(token);
     if (!token) throw createError(404, "token not found");
 
     try {
@@ -170,6 +176,7 @@ const activateUserAccount = async (req, res, next) => {
       if (error.name === "TokenExpiredError") {
         throw createError(401, "Token has expired");
       } else if (error.name === "JsonWebTokenError") {
+        console.log(error);
         throw createError(401, "Invalid Token");
       } else {
         throw error;
@@ -329,11 +336,7 @@ const handleForgetPassword = async (req, res, next) => {
     }
 
     //create jwt
-    const token = createJSONWebToken(
-      {email},
-      jwtResetPasswordKey,
-      "10m"
-    );
+    const token = createJSONWebToken({ email }, jwtResetPasswordKey, "10m");
 
     //prepare email
     const emailData = {
@@ -365,26 +368,22 @@ const handleForgetPassword = async (req, res, next) => {
 
 const handleResetPassword = async (req, res, next) => {
   try {
+    const { token, password } = req.body;
 
-    const {token, password} = req.body
+    const decoded = jwt.verify(token, jwtResetPasswordKey);
 
-    const decoded = jwt.verify(token, jwtResetPasswordKey)
-
-    if(!decoded){
-      throw createError(400, 'Invalid or expired token')
+    if (!decoded) {
+      throw createError(400, "Invalid or expired token");
     }
 
-    const filter = {email: decoded.email}
-    const update = {password: password}
-    const options = {new: true}
-
-
-    
+    const filter = { email: decoded.email };
+    const update = { password: password };
+    const options = { new: true };
 
     const updatedUser = await User.findOneAndUpdate(
       filter,
       update,
-      options,
+      options
     ).select("-password");
 
     if (!updatedUser) {
@@ -401,7 +400,6 @@ const handleResetPassword = async (req, res, next) => {
     next(error);
   }
 };
-
 
 module.exports = {
   getUsers,
