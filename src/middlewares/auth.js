@@ -6,6 +6,7 @@ const isLoggedIn = async (req, res, next) => {
   try {
     const accessToken = req.cookies.accessToken;
 
+
     if (!accessToken) {
       throw createError(401, "Access token not found. Please login again");
     }

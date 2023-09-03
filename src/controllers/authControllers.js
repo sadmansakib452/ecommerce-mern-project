@@ -5,6 +5,10 @@ const { successResponse } = require("./responseController");
 const { createJSONWebToken } = require("../helper/jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { jwtAccessKey, jwtRefreshKey } = require("../secret");
+const {
+  setAccessTokenCookie,
+  setRefreshTokenCookie,
+} = require("../helper/cookie");
 
 const handleLogin = async (req, res, next) => {
   try {
@@ -32,27 +36,16 @@ const handleLogin = async (req, res, next) => {
 
     //token, set on cokie
     //create jwt
-    const accessToken = createJSONWebToken({ user }, jwtAccessKey, "1m");
+    const accessToken = createJSONWebToken({ user }, jwtAccessKey, "5m");
 
-    res.cookie("accessToken", accessToken, {
-      maxAge: 1 * 60 * 1000, //15m
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+    setAccessTokenCookie(res, accessToken);
 
     const refreshToken = createJSONWebToken({ user }, jwtRefreshKey, "7d");
 
-    res.cookie("refreshToken", refreshToken, {
-      maxAge: 7 * 24 * 60 * 60 * 1000, //7days
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+    setRefreshTokenCookie(res, refreshToken);
 
-    const userWithoutPassword = await User.findOne({ email }).select(
-      "-password"
-    );
+    const userWithoutPassword = user.toObject();
+    delete userWithoutPassword.password;
 
     //success response
     return successResponse(res, {
@@ -68,6 +61,7 @@ const handleLogin = async (req, res, next) => {
 const handleLogout = async (req, res, next) => {
   try {
     res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
 
     //success response
     return successResponse(res, {
@@ -94,15 +88,10 @@ const handleRefreshToken = async (req, res, next) => {
     const accessToken = createJSONWebToken(
       decodedToken.user,
       jwtAccessKey,
-      "1m"
+      "5m"
     );
 
-    res.cookie("accessToken", accessToken, {
-      maxAge: 1 * 60 * 1000, //15m
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+    setAccessTokenCookie(res, accessToken);
 
     //success response
     return successResponse(res, {
@@ -119,7 +108,7 @@ const handleProtectedRoute = async (req, res, next) => {
   try {
     const accessToken = req.cookies.accessToken;
 
-    if(!accessToken) throw createError(401, 'Token is missing, Please login')
+    if (!accessToken) throw createError(401, "Token is missing, Please login");
 
     //verify the old access token
     const decodedToken = jwt.verify(accessToken, jwtAccessKey);
@@ -128,7 +117,6 @@ const handleProtectedRoute = async (req, res, next) => {
       throw createError(401, "Invalid access token. Please login again");
     }
 
-  
     //success response
     return successResponse(res, {
       statusCode: 200,
@@ -139,8 +127,6 @@ const handleProtectedRoute = async (req, res, next) => {
     next(error);
   }
 };
-
-
 
 module.exports = {
   handleLogin,

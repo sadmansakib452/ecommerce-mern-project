@@ -14,6 +14,8 @@ const emailWithNodeMail = require("../helper/email");
 const fs = require("fs").promises;
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const checkUserExists = require("../helper/checkUserExists");
+const sendEmail = require("../helper/sendEmail");
 
 const getUsers = async (req, res, next) => {
   try {
@@ -38,7 +40,7 @@ const getUsers = async (req, res, next) => {
       .limit(limit)
       .skip((page - 1) * limit);
     const count = await User.find(filter).countDocuments();
-    if (!users) throw createError(404, "no users found");
+    if (!users || users.length === 0) throw createError(404, "no users found");
 
     return successResponse(res, {
       statusCode: 200,
@@ -79,7 +81,7 @@ const deleteUserById = async (req, res, next) => {
   try {
     const id = req.params.id;
     const options = { password: 0 };
-    const user = await findWithId(User, id, options);
+    user = await findWithId(User, id, options);
 
     await User.findByIdAndDelete({
       _id: id,
@@ -110,7 +112,7 @@ const processRegister = async (req, res, next) => {
 
     const imageBufferString = image.buffer.toString("base64");
 
-    const userExists = await User.exists({ email: email });
+    const userExists = await checkUserExists(email)
     if (userExists) {
       throw createError(409, "User already exists");
     }
@@ -134,17 +136,11 @@ const processRegister = async (req, res, next) => {
     };
 
     //send email with nodemailer
-    try {
-      await emailWithNodeMail(emailData);
-    } catch (emailError) {
-      next(createError(500, "Failed to send varification email"));
-      return;
-    }
-
+    sendEmail(emailData)
     return successResponse(res, {
       statusCode: 200,
       message: `Please go to your ${email} for completing your registration process`,
-      payload: { token },
+      
     });
   } catch (error) {
     next(error);
@@ -196,11 +192,11 @@ const updateUserById = async (req, res, next) => {
 
     let updates = {};
 
-    console.log(req.body.email);
-    for (let key in req.body) {
-      if (["name", "password", "phone", "address"].includes(key)) {
+    const allowedFields = ["name", "password", "phone", "address"]
+    for (const key in req.body) {
+      if (allowedFields.includes(key)) {
         updates[key] = req.body[key];
-      } else if (["email"].includes(key)) {
+      } else if (key === 'email') {
         throw createError(400, "Email can not be updated");
       }
     }
@@ -298,7 +294,7 @@ const handleUpdatePassword = async (req, res, next) => {
     // compare the password
     const isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isPasswordMatch) {
-      throw createError(400, "old password is not correct");
+      throw createError(400, "old password is incorrect");
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -349,16 +345,11 @@ const handleForgetPassword = async (req, res, next) => {
     };
 
     //send email with nodemailer
-    try {
-      await emailWithNodeMail(emailData);
-    } catch (emailError) {
-      next(createError(500, "Failed to send reset password email"));
-      return;
-    }
+    sendEmail(emailData)
 
     return successResponse(res, {
       statusCode: 200,
-      message: `Please go to your ${email} for reseting the password`,
+      message: `Please go to your ${email} to reset the password`,
       payload: token,
     });
   } catch (error) {
