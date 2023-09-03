@@ -9,6 +9,7 @@ const seedRouter = require("./routers/seedRouter");
 const { errorResponse } = require("./controllers/responseController");
 const authRouter = require("./routers/authRouter");
 const categoryRouter = require("./routers/categoryRouter");
+const productRouter = require("./routers/productRouter");
 const app = express();
 
 const rateLimiter = rateLimit({
@@ -28,6 +29,7 @@ app.use('/api/users',userRouter)
 app.use('/api/seed', seedRouter)
 app.use('/api/auth', authRouter)
 app.use("/api/categories", categoryRouter);
+app.use("/api/products", productRouter);
 
 app.get("/test", (req, res) => {
   res.status(200).send({
